@@ -1,12 +1,15 @@
--- main.lua
+
 function love.load()
     love.window.setTitle("Tetris")
     love.window.setMode(400, 600)
-    
+
     gridWidth = 10
     gridHeight = 20
     cellSize = 30
     grid = {}
+    score = 0
+    level = 1
+    linesCleared = 0
 
     for y = 1, gridHeight do
         grid[y] = {}
@@ -14,7 +17,7 @@ function love.load()
             grid[y][x] = 0
         end
     end
-    
+
     shapes = {
         {{1, 1, 1}, {0, 1, 0}}, -- T shape
         {{1, 1, 1, 1}},         -- I shape
@@ -30,9 +33,13 @@ function love.load()
     currentY = 0
     dropTimer = 0
     dropInterval = 0.5
+
+    gameOver = false
 end
 
 function love.update(dt)
+    if gameOver then return end
+
     dropTimer = dropTimer + dt
     if dropTimer >= dropInterval then
         currentY = currentY + 1
@@ -43,7 +50,7 @@ function love.update(dt)
         end
         dropTimer = 0
     end
-    
+
     if love.keyboard.isDown("left") then
         if not checkCollision(currentShape, currentX - 1, currentY) then
             currentX = currentX - 1
@@ -53,12 +60,21 @@ function love.update(dt)
             currentX = currentX + 1
         end
     elseif love.keyboard.isDown("down") then
-        currentY = currentY + 1
-        dropTimer = 0
+        dropTimer = dropInterval
+    elseif love.keyboard.isDown("up") then
+        local rotatedShape = rotateShape(currentShape)
+        if not checkCollision(rotatedShape, currentX, currentY) then
+            currentShape = rotatedShape
+        end
     end
 end
 
 function love.draw()
+    if gameOver then
+        love.graphics.print("Game Over! Press R to Restart", 100, 300)
+        return
+    end
+
     for y = 1, gridHeight do
         for x = 1, gridWidth do
             if grid[y][x] == 1 then
@@ -66,7 +82,7 @@ function love.draw()
             end
         end
     end
-    
+
     for y = 1, #currentShape do
         for x = 1, #currentShape[y] do
             if currentShape[y][x] == 1 then
@@ -74,6 +90,9 @@ function love.draw()
             end
         end
     end
+
+    love.graphics.print("Score: " .. score, 10, 10)
+    love.graphics.print("Level: " .. level, 10, 30)
 end
 
 function checkCollision(shape, x, y)
@@ -102,6 +121,7 @@ function placeShape(shape, x, y)
 end
 
 function clearRows()
+    local rowsCleared = 0
     for y = gridHeight, 1, -1 do
         local full = true
         for x = 1, gridWidth do
@@ -111,6 +131,7 @@ function clearRows()
             end
         end
         if full then
+            rowsCleared = rowsCleared + 1
             for yy = y, 2, -1 do
                 grid[yy] = grid[yy - 1]
             end
@@ -118,7 +139,15 @@ function clearRows()
             for x = 1, gridWidth do
                 grid[1][x] = 0
             end
+            y = y + 1
         end
+    end
+    score = score + rowsCleared * 100 * level
+    linesCleared = linesCleared + rowsCleared
+    if linesCleared >= 10 then
+        level = level + 1
+        linesCleared = 0
+        dropInterval = dropInterval * 0.9
     end
 end
 
@@ -127,6 +156,23 @@ function newShape()
     currentX = math.floor(gridWidth / 2) - math.floor(#currentShape[1] / 2)
     currentY = 0
     if checkCollision(currentShape, currentX, currentY) then
-        love.event.quit("Game Over")
+        gameOver = true
+    end
+end
+
+function rotateShape(shape)
+    local newShape = {}
+    for x = 1, #shape[1] do
+        newShape[x] = {}
+        for y = 1, #shape do
+            newShape[x][y] = shape[#shape - y + 1][x]
+        end
+    end
+    return newShape
+end
+
+function love.keypressed(key)
+    if key == "r" and gameOver then
+        love.load()
     end
 end
