@@ -2,7 +2,7 @@
 function love.load()
     love.window.setTitle("Tetris")
     love.window.setMode(400, 600)
-
+    
     gridWidth = 10
     gridHeight = 20
     cellSize = 30
@@ -29,10 +29,13 @@ function love.load()
     }
 
     currentShape = shapes[love.math.random(#shapes)]
+    nextShape = shapes[love.math.random(#shapes)]
     currentX = math.floor(gridWidth / 2) - math.floor(#currentShape[1] / 2)
     currentY = 0
     dropTimer = 0
     dropInterval = 0.5
+    softDrop = false
+    ghostY = calculateGhostY()
 
     gameOver = false
 end
@@ -41,6 +44,12 @@ function love.update(dt)
     if gameOver then return end
 
     dropTimer = dropTimer + dt
+    if softDrop then
+        dropInterval = 0.1
+    else
+        dropInterval = 0.5 - (level - 1) * 0.05
+    end
+
     if dropTimer >= dropInterval then
         currentY = currentY + 1
         if checkCollision(currentShape, currentX, currentY) then
@@ -51,6 +60,8 @@ function love.update(dt)
         dropTimer = 0
     end
 
+    ghostY = calculateGhostY()
+
     if love.keyboard.isDown("left") then
         if not checkCollision(currentShape, currentX - 1, currentY) then
             currentX = currentX - 1
@@ -58,13 +69,6 @@ function love.update(dt)
     elseif love.keyboard.isDown("right") then
         if not checkCollision(currentShape, currentX + 1, currentY) then
             currentX = currentX + 1
-        end
-    elseif love.keyboard.isDown("down") then
-        dropTimer = dropInterval
-    elseif love.keyboard.isDown("up") then
-        local rotatedShape = rotateShape(currentShape)
-        if not checkCollision(rotatedShape, currentX, currentY) then
-            currentShape = rotatedShape
         end
     end
 end
@@ -83,10 +87,30 @@ function love.draw()
         end
     end
 
+    -- Draw ghost piece
+    love.graphics.setColor(1, 1, 1, 0.3)
+    for y = 1, #currentShape do
+        for x = 1, #currentShape[y] do
+            if currentShape[y][x] == 1 then
+                love.graphics.rectangle("fill", (currentX + x - 1) * cellSize, (ghostY + y - 1) * cellSize, cellSize, cellSize)
+            end
+        end
+    end
+    love.graphics.setColor(1, 1, 1, 1)
+
     for y = 1, #currentShape do
         for x = 1, #currentShape[y] do
             if currentShape[y][x] == 1 then
                 love.graphics.rectangle("fill", (currentX + x - 1) * cellSize, (currentY + y - 1) * cellSize, cellSize, cellSize)
+            end
+        end
+    end
+
+    love.graphics.print("Next:", 320, 10)
+    for y = 1, #nextShape do
+        for x = 1, #nextShape[y] do
+            if nextShape[y][x] == 1 then
+                love.graphics.rectangle("fill", 320 + x * cellSize, 30 + y * cellSize, cellSize, cellSize)
             end
         end
     end
@@ -147,14 +171,15 @@ function clearRows()
     if linesCleared >= 10 then
         level = level + 1
         linesCleared = 0
-        dropInterval = dropInterval * 0.9
     end
 end
 
 function newShape()
-    currentShape = shapes[love.math.random(#shapes)]
+    currentShape = nextShape
+    nextShape = shapes[love.math.random(#shapes)]
     currentX = math.floor(gridWidth / 2) - math.floor(#currentShape[1] / 2)
     currentY = 0
+    ghostY = calculateGhostY()
     if checkCollision(currentShape, currentX, currentY) then
         gameOver = true
     end
@@ -171,8 +196,43 @@ function rotateShape(shape)
     return newShape
 end
 
+function calculateGhostY()
+    local y = currentY
+    while not checkCollision(currentShape, currentX, y) do
+        y = y + 1
+    end
+    return y - 1
+end
+
 function love.keypressed(key)
     if key == "r" and gameOver then
         love.load()
+    elseif key == "up" then
+        local rotatedShape = rotateShape(currentShape)
+        if not checkCollision(rotatedShape, currentX, currentY) then
+            currentShape = rotatedShape
+            ghostY = calculateGhostY()
+        end
+    elseif key == "left" then
+        if not checkCollision(currentShape, currentX - 1, currentY) then
+            currentX = currentX - 1
+            ghostY = calculateGhostY()
+        end
+    elseif key == "right" then
+        if not checkCollision(currentShape, currentX + 1, currentY) then
+            currentX = currentX + 1
+            ghostY = calculateGhostY()
+        end
+    elseif key == "down" then
+        softDrop = true
+    elseif key == "space" then
+        currentY = ghostY
+        dropTimer = dropInterval
+    end
+end
+
+function love.keyreleased(key)
+    if key == "down" then
+        softDrop = false
     end
 end
