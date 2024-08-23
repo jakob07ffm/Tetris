@@ -27,4 +27,4 @@ This project is made with Love2D. The game features traditional Tetris mechanics
 - press alt + l and the game starts
 
   
-![screenshot_2.JPG]
+![screenshot](screenshot_2.JPG)
