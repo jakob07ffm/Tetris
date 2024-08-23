@@ -20,3 +20,11 @@ This project is made with Love2D. The game features traditional Tetris mechanics
   - **Down**: Soft drop (increases falling speed temporarily).
 - **Spacebar**: Hard drop (instantly drop the tetromino to the ghost piece position).
 - **R Key**: Restart the game after a game over.
+
+## How to run
+- Download the code
+- Open the main.lua file with vscode
+- press alt + l and the game starts
+
+  
+![screenshot_2.JPG]
